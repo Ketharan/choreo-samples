@@ -50,7 +50,14 @@ COPY --from=build /app/build /usr/share/nginx/html
 
 # Ensure proper permissions for NGINX to serve the files
 USER root
-RUN apk add --no-cache --upgrade libcrypto3 libssl3 libxml2 brotli-libs
+RUN apk update \
+ && apk add --no-cache --upgrade libcrypto3 libssl3 libxml2 brotli-libs \
+ && INSTALLED="$(apk info -v | grep '^brotli-libs-')" \
+ && echo ">> brotli-libs: ${INSTALLED}" \
+ && case "${INSTALLED}" in \
+      brotli-libs-1.2.0-*) echo ">> FAIL: still vulnerable (CVE-2026-111497); apk repo has no fixed build"; exit 1 ;; \
+      *) echo ">> OK: brotli-libs upgraded past 1.2.0" ;; \
+    esac
 # Create a user with a known UID/GID (10014) within the range 10000-20000 for Choreo
 RUN adduser \
     --disabled-password \
